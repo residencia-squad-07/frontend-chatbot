@@ -5,8 +5,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { CompanyProvider } from "@/contexts/CompanyContext";
+import { UsuarioProvider } from "@/contexts/UserContext";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import CompanyDashboard from "./pages/CompanyDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -21,6 +23,7 @@ const App = () => (
     <TooltipProvider>
       <AuthProvider>
         <CompanyProvider>
+          <UsuarioProvider>
           <Toaster />
           <Sonner />
           <BrowserRouter>
@@ -34,10 +37,19 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/empresa"
+                element={
+                  <ProtectedRoute>
+                    <CompanyDashboard />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="/" element={<Navigate to="/login" />} />
               <Route path="*" element={<NotFound />} />
-            </Routes>
+              </Routes>
           </BrowserRouter>
+          </UsuarioProvider>
         </CompanyProvider>
       </AuthProvider>
     </TooltipProvider>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useCompanies, Company } from '@/contexts/CompanyContext';
+import { useEmpresas } from '@/contexts/CompanyContext';
+import { useUsuarios } from '@/contexts/UserContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,62 +25,50 @@ import { toast } from 'sonner';
 interface CompanyModalProps {
   isOpen: boolean;
   onClose: () => void;
-  editingCompanyId: string | null;
+  editingCompanyId: number | null;
 }
 
 const CompanyModal = ({ isOpen, onClose, editingCompanyId }: CompanyModalProps) => {
-  const { addCompany, updateCompany, getCompany } = useCompanies();
+  const { empresas, addEmpresa, updateEmpresa, getEmpresa } = useEmpresas();
+  const { addUsuariosForEmpresa, getUsuariosByEmpresa, setTelefonesForEmpresa } = useUsuarios();
   const [formData, setFormData] = useState({
-    name: '',
+    nome_empresa: '',
     cnpj: '',
-    status: 'Ativa' as 'Ativa' | 'Inativa',
     phoneNumbers: [''],
-    chatbotAccess: true,
   });
 
   useEffect(() => {
-    if (editingCompanyId) {
-      const company = getCompany(editingCompanyId);
-      if (company) {
+    if (editingCompanyId !== null) {
+      const empresa = getEmpresa(editingCompanyId);
+      if (empresa) {
+        const usuarios = getUsuariosByEmpresa(editingCompanyId);
+        const telefones = usuarios.map(u => u.telefone ?? '').filter(t => t);
         setFormData({
-          name: company.name,
-          cnpj: company.cnpj,
-          status: company.status,
-          phoneNumbers: company.phoneNumbers,
-          chatbotAccess: company.chatbotAccess,
+          nome_empresa: empresa.nome_empresa,
+          cnpj: empresa.cnpj,
+          phoneNumbers: telefones.length ? telefones : [''],
         });
       }
     } else {
       setFormData({
-        name: '',
+        nome_empresa: '',
         cnpj: '',
-        status: 'Ativa',
         phoneNumbers: [''],
-        chatbotAccess: true,
       });
     }
-  }, [editingCompanyId, getCompany, isOpen]);
+  }, [editingCompanyId, getEmpresa, getUsuariosByEmpresa, isOpen]);
 
   const handleAddPhoneNumber = () => {
-    setFormData(prev => ({
-      ...prev,
-      phoneNumbers: [...prev.phoneNumbers, '']
-    }));
+    setFormData(prev => ({ ...prev, phoneNumbers: [...prev.phoneNumbers, ''] }));
   };
 
   const handleRemovePhoneNumber = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      phoneNumbers: prev.phoneNumbers.filter((_, i) => i !== index)
-    }));
+    setFormData(prev => ({ ...prev, phoneNumbers: prev.phoneNumbers.filter((_, i) => i !== index) }));
   };
 
   const handlePhoneNumberChange = (index: number, value: string) => {
     const formatted = value.replace(/\D/g, '');
-    setFormData(prev => ({
-      ...prev,
-      phoneNumbers: prev.phoneNumbers.map((phone, i) => i === index ? formatted : phone)
-    }));
+    setFormData(prev => ({ ...prev, phoneNumbers: prev.phoneNumbers.map((p, i) => (i === index ? formatted : p)) }));
   };
 
   const formatCNPJInput = (value: string) => {
@@ -91,7 +80,7 @@ const CompanyModal = ({ isOpen, onClose, editingCompanyId }: CompanyModalProps) 
     e.preventDefault();
 
     // Validação
-    if (!formData.name.trim()) {
+    if (!formData.nome_empresa.trim()) {
       toast.error('Nome da empresa é obrigatório');
       return;
     }
@@ -101,22 +90,25 @@ const CompanyModal = ({ isOpen, onClose, editingCompanyId }: CompanyModalProps) 
       return;
     }
 
-    const validPhones = formData.phoneNumbers.filter(phone => phone.length >= 10);
+    const duplicate = empresas.some(e => e.cnpj === formData.cnpj && e.id_empresa !== editingCompanyId);
+    if (duplicate) {
+      toast.error('CNPJ já cadastrado');
+      return;
+    }
+    const validPhones = formData.phoneNumbers.filter(p => p.length >= 10);
     if (validPhones.length === 0) {
       toast.error('Adicione pelo menos um telefone válido (mínimo 10 dígitos)');
       return;
     }
+    const empresaData = { nome_empresa: formData.nome_empresa, cnpj: formData.cnpj };
 
-    const companyData = {
-      ...formData,
-      phoneNumbers: validPhones
-    };
-
-    if (editingCompanyId) {
-      updateCompany(editingCompanyId, companyData);
+    if (editingCompanyId !== null) {
+      updateEmpresa(editingCompanyId, empresaData);
+      setTelefonesForEmpresa(validPhones, editingCompanyId);
       toast.success('Empresa atualizada com sucesso!');
     } else {
-      addCompany(companyData);
+      const created = addEmpresa(empresaData);
+      addUsuariosForEmpresa(validPhones, created.id_empresa);
       toast.success('Empresa adicionada com sucesso!');
     }
 
@@ -137,11 +129,11 @@ const CompanyModal = ({ isOpen, onClose, editingCompanyId }: CompanyModalProps) 
 
         <form onSubmit={handleSubmit} className="space-y-6 mt-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Nome da Empresa *</Label>
+            <Label htmlFor="nome_empresa">Nome da Empresa *</Label>
             <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              id="nome_empresa"
+              value={formData.nome_empresa}
+              onChange={(e) => setFormData(prev => ({ ...prev, nome_empresa: e.target.value }))}
               placeholder="Ex: Empresa XPTO Ltda"
               required
             />
@@ -160,33 +152,10 @@ const CompanyModal = ({ isOpen, onClose, editingCompanyId }: CompanyModalProps) 
             <p className="text-xs text-muted-foreground">Somente números (14 dígitos)</p>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="status">Status *</Label>
-            <Select
-              value={formData.status}
-              onValueChange={(value: 'Ativa' | 'Inativa') => 
-                setFormData(prev => ({ ...prev, status: value }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Ativa">Ativa</SelectItem>
-                <SelectItem value="Inativa">Inativa</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label>Números de Telefone *</Label>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={handleAddPhoneNumber}
-              >
+              <Button type="button" size="sm" variant="outline" onClick={handleAddPhoneNumber}>
                 <Plus className="h-4 w-4 mr-2" />
                 Adicionar número
               </Button>
@@ -202,12 +171,7 @@ const CompanyModal = ({ isOpen, onClose, editingCompanyId }: CompanyModalProps) 
                     maxLength={11}
                   />
                   {formData.phoneNumbers.length > 1 && (
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="outline"
-                      onClick={() => handleRemovePhoneNumber(index)}
-                    >
+                    <Button type="button" size="icon" variant="outline" onClick={() => handleRemovePhoneNumber(index)}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   )}
@@ -217,21 +181,9 @@ const CompanyModal = ({ isOpen, onClose, editingCompanyId }: CompanyModalProps) 
             <p className="text-xs text-muted-foreground">Somente números (mínimo 10 dígitos)</p>
           </div>
 
-          <div className="flex items-center justify-between p-4 bg-secondary rounded-lg">
-            <div className="space-y-1">
-              <Label htmlFor="chatbot">Acesso ao Chatbot</Label>
-              <p className="text-sm text-muted-foreground">
-                Permitir que esta empresa use o chatbot
-              </p>
-            </div>
-            <Switch
-              id="chatbot"
-              checked={formData.chatbotAccess}
-              onCheckedChange={(checked) => 
-                setFormData(prev => ({ ...prev, chatbotAccess: checked }))
-              }
-            />
-          </div>
+          
+
+          
 
           <div className="flex gap-3 justify-end pt-4 border-t">
             <Button type="button" variant="outline" onClick={onClose}>

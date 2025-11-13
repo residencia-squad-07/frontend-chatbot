@@ -3,11 +3,12 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 interface User {
   username: string;
   name: string;
+  role: 'plataforma_admin' | 'empresa_admin';
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string) => boolean;
+  login: (username: string, password: string, role: User['role']) => boolean;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -24,13 +25,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const login = (username: string, password: string): boolean => {
-    // Aceita qualquer credencial, apenas valida se não está vazio
+  const login = (username: string, password: string, role: User['role']): boolean => {
     if (username.trim() && password.trim()) {
-      const userData = {
-        username: username,
-        name: username.charAt(0).toUpperCase() + username.slice(1)
-      };
+      const name = (username || '').charAt(0).toUpperCase() + (username || '').slice(1);
+      const userData: User = { username, name, role };
       setUser(userData);
       localStorage.setItem('easy_admin_user', JSON.stringify(userData));
       return true;

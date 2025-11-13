@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import logoEasy from '@/assets/logo-easy.png';
 
@@ -13,21 +14,19 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [role, setRole] = useState<'plataforma_admin' | 'empresa_admin'>('plataforma_admin');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
-    setTimeout(() => {
-      const success = login(username, password);
-      if (success) {
-        toast.success('Login realizado com sucesso!');
-        navigate('/dashboard');
-      } else {
-        toast.error('Usuário ou senha inválidos');
-      }
-      setIsLoading(false);
-    }, 500);
+    const success = login(username, password, role);
+    if (success) {
+      toast.success('Login realizado com sucesso!');
+      navigate(role === 'plataforma_admin' ? '/dashboard' : '/empresa');
+    } else {
+      toast.error('Usuário ou senha inválidos');
+    }
+    setIsLoading(false);
   };
 
   return (
@@ -71,6 +70,19 @@ const Login = () => {
               />
             </div>
 
+            <div className="space-y-2">
+              <Label>Papel de acesso</Label>
+              <Select value={role} onValueChange={(value: 'plataforma_admin' | 'empresa_admin') => setRole(value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="plataforma_admin">Administrador da Plataforma</SelectItem>
+                  <SelectItem value="empresa_admin">Cliente (Administrador da Empresa)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <Button
               type="submit"
               className="w-full"
@@ -80,7 +92,7 @@ const Login = () => {
             </Button>
 
             <p className="text-xs text-center text-muted-foreground">
-              Digite qualquer usuário e senha para acessar o sistema
+              Digite qualquer usuário e senha. Escolha o papel para acessar.
             </p>
           </div>
         </form>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCompanies } from '@/contexts/CompanyContext';
+import { useEmpresas } from '@/contexts/CompanyContext';
 import { Button } from '@/components/ui/button';
 import { Plus, LogOut, Building2, Settings } from 'lucide-react';
 import CompanyTable from '@/components/CompanyTable';
@@ -9,16 +9,16 @@ import logoEasy from '@/assets/logo-easy.png';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
-  const { companies } = useCompanies();
+  const { empresas } = useEmpresas();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCompanyId, setEditingCompanyId] = useState<string | null>(null);
+  const [editingCompanyId, setEditingCompanyId] = useState<number | null>(null);
 
   const handleAddCompany = () => {
     setEditingCompanyId(null);
     setIsModalOpen(true);
   };
 
-  const handleEditCompany = (id: string) => {
+  const handleEditCompany = (id: number) => {
     setEditingCompanyId(id);
     setIsModalOpen(true);
   };
@@ -84,7 +84,7 @@ const Dashboard = () => {
             <div>
               <h2 className="text-2xl font-bold text-foreground">Empresas Cadastradas</h2>
               <p className="text-muted-foreground mt-1">
-                {companies.length} {companies.length === 1 ? 'empresa cadastrada' : 'empresas cadastradas'}
+                {empresas.length} {empresas.length === 1 ? 'empresa cadastrada' : 'empresas cadastradas'}
               </p>
             </div>
             <Button onClick={handleAddCompany}>

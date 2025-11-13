@@ -1,79 +1,77 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-export interface Company {
-  id: string;
-  name: string;
+export interface Empresa {
+  id_empresa: number;
+  nome_empresa: string;
   cnpj: string;
-  status: 'Ativa' | 'Inativa';
-  phoneNumbers: string[];
-  chatbotAccess: boolean;
-  createdAt: string;
+  token_api: string;
 }
 
-interface CompanyContextType {
-  companies: Company[];
-  addCompany: (company: Omit<Company, 'id' | 'createdAt'>) => void;
-  updateCompany: (id: string, company: Omit<Company, 'id' | 'createdAt'>) => void;
-  deleteCompany: (id: string) => void;
-  getCompany: (id: string) => Company | undefined;
+interface EmpresaContextType {
+  empresas: Empresa[];
+  addEmpresa: (empresa: Omit<Empresa, 'id_empresa' | 'token_api'>) => Empresa;
+  updateEmpresa: (id_empresa: number, empresa: Omit<Empresa, 'id_empresa' | 'token_api'>) => void;
+  deleteEmpresa: (id_empresa: number) => void;
+  getEmpresa: (id_empresa: number) => Empresa | undefined;
 }
 
-const CompanyContext = createContext<CompanyContextType | undefined>(undefined);
+const EmpresaContext = createContext<EmpresaContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'easy_companies';
+const STORAGE_KEY = 'easy_empresas';
 
 export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [companies, setCompanies] = useState<Company[]>([]);
+  const [empresas, setEmpresas] = useState<Empresa[]>([]);
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
-      setCompanies(JSON.parse(saved));
+      setEmpresas(JSON.parse(saved));
     }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(companies));
-  }, [companies]);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(empresas));
+  }, [empresas]);
 
-  const addCompany = (company: Omit<Company, 'id' | 'createdAt'>) => {
-    const newCompany: Company = {
-      ...company,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString()
+  const addEmpresa = (empresa: Omit<Empresa, 'id_empresa' | 'token_api'>): Empresa => {
+    const newEmpresa: Empresa = {
+      ...empresa,
+      id_empresa: Date.now(),
+      token_api: Math.random().toString(36).slice(2) + Date.now().toString(36)
     };
-    setCompanies(prev => [...prev, newCompany]);
+    setEmpresas(prev => [...prev, newEmpresa]);
+    return newEmpresa;
   };
 
-  const updateCompany = (id: string, updatedData: Omit<Company, 'id' | 'createdAt'>) => {
-    setCompanies(prev =>
-      prev.map(company =>
-        company.id === id
-          ? { ...company, ...updatedData }
-          : company
+  const updateEmpresa = (id_empresa: number, updatedData: Omit<Empresa, 'id_empresa' | 'token_api'>) => {
+    setEmpresas(prev =>
+      prev.map(empresa =>
+        empresa.id_empresa === id_empresa
+          ? { ...empresa, ...updatedData }
+          : empresa
       )
     );
   };
 
-  const deleteCompany = (id: string) => {
-    setCompanies(prev => prev.filter(company => company.id !== id));
+  const deleteEmpresa = (id_empresa: number) => {
+    setEmpresas(prev => prev.filter(empresa => empresa.id_empresa !== id_empresa));
   };
 
-  const getCompany = (id: string) => {
-    return companies.find(company => company.id === id);
+  const getEmpresa = (id_empresa: number) => {
+    return empresas.find(empresa => empresa.id_empresa === id_empresa);
   };
 
   return (
-    <CompanyContext.Provider value={{ companies, addCompany, updateCompany, deleteCompany, getCompany }}>
+    <EmpresaContext.Provider value={{ empresas, addEmpresa, updateEmpresa, deleteEmpresa, getEmpresa }}>
       {children}
-    </CompanyContext.Provider>
+    </EmpresaContext.Provider>
   );
 };
 
-export const useCompanies = () => {
-  const context = useContext(CompanyContext);
+export const useEmpresas = () => {
+  const context = useContext(EmpresaContext);
   if (context === undefined) {
-    throw new Error('useCompanies must be used within a CompanyProvider');
+    throw new Error('useEmpresas must be used within a CompanyProvider');
   }
   return context;
 };
