@@ -3,13 +3,21 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEmpresas } from '@/contexts/CompanyContext';
 import { Button } from '@/components/ui/button';
 import { Plus, LogOut, Building2, Settings } from 'lucide-react';
+import { Bell } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { useUsuarios } from '@/contexts/UserContext';
 import CompanyTable from '@/components/CompanyTable';
 import CompanyModal from '@/components/CompanyModal';
 import logoEasy from '@/assets/logo-easy.png';
 
 const Dashboard = () => {
+      const { empresas } = useEmpresas();
+      const { getUsuariosByEmpresa } = useUsuarios();
+      const [notificacaoAtiva, setNotificacaoAtiva] = useState<Record<string, boolean>>({});
+      const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const { user, logout } = useAuth();
-  const { empresas } = useEmpresas();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCompanyId, setEditingCompanyId] = useState<number | null>(null);
 
@@ -30,6 +38,38 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background flex">
+      {/* Modal de Notificações */}
+      <Dialog open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Ativar/Desativar Notificações</DialogTitle>
+          </DialogHeader>
+          {empresas.length === 0 ? (
+            <p className="text-muted-foreground">Nenhuma empresa cadastrada.</p>
+          ) : (
+            <div className="space-y-6">
+              {empresas.map((empresa) => (
+                <div key={empresa.id_empresa} className="border-b pb-4 mb-4">
+                  <h2 className="font-bold text-lg text-foreground mb-2">{empresa.nome_empresa}</h2>
+                  <div className="space-y-2">
+                    {getUsuariosByEmpresa(empresa.id_empresa).map((usuario) => (
+                      <div key={`${empresa.id_empresa}_${usuario.telefone}`} className="flex items-center justify-between">
+                        <div>
+                          <Label>{usuario.nome} - <span className="text-muted-foreground">{usuario.telefone}</span></Label>
+                        </div>
+                        <Switch
+                          checked={!!notificacaoAtiva[`${empresa.id_empresa}_${usuario.telefone}`]}
+                          onCheckedChange={(checked) => setNotificacaoAtiva((prev) => ({ ...prev, [`${empresa.id_empresa}_${usuario.telefone}`]: checked }))}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
       {/* Sidebar */}
       <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
         <div className="p-6 border-b border-sidebar-border">
@@ -44,9 +84,13 @@ const Dashboard = () => {
             <Building2 className="mr-3 h-5 w-5" />
             Empresas
           </Button>
-          <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-            <Settings className="mr-3 h-5 w-5" />
-            Configurações
+          <Button
+            variant="ghost"
+            className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            onClick={() => setIsNotificationsOpen(true)}
+          >
+            <Bell className="mr-3 h-5 w-5" />
+            Notificações
           </Button>
         </nav>
 
