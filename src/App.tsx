@@ -47,7 +47,7 @@ const App = () => (
               />
               <Route path="/" element={<Navigate to="/login" />} />
               <Route path="*" element={<NotFound />} />
-              </Routes>
+            </Routes>
           </BrowserRouter>
           </UsuarioProvider>
         </CompanyProvider>

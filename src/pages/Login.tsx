@@ -30,8 +30,10 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md space-y-8 animate-fade-in">
+    <div className="min-h-screen flex items-center justify-center relative px-4 bg-black overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none z-0" style={{background: 'radial-gradient(circle at 50% 40%, rgba(80,80,160,0.45) 0%, rgba(0,0,0,0.95) 70%)'}} />
+      <div className="absolute top-1/2 left-1/2 w-40 h-40 bg-gradient-to-br from-blue-500 via-blue-800 to-black opacity-80 rounded-full blur-2xl pointer-events-none animate-pulse shadow-[0_0_80px_20px_rgba(80,80,255,0.5)]" style={{ transform: 'translate(-50%, -50%)' }} />
+      <div className="w-full max-w-md space-y-8 animate-fade-in relative z-10">
         <div className="text-center space-y-6">
           <img src={logoEasy} alt="EASY Logo" className="h-16 mx-auto" />
           <div>
@@ -43,7 +45,7 @@ const Login = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-          <div className="bg-card rounded-lg border border-border p-8 space-y-6">
+          <div className="bg-card rounded-lg border border-border p-8 space-y-6 shadow-2xl shadow-blue-900/80 backdrop-blur-md">
             <div className="space-y-2">
               <Label htmlFor="username">Nome de usuário</Label>
               <Input
