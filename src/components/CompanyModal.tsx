@@ -4,21 +4,7 @@ import { useUsuarios } from '@/contexts/UserContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -31,6 +17,7 @@ interface CompanyModalProps {
 const CompanyModal = ({ isOpen, onClose, editingCompanyId }: CompanyModalProps) => {
   const { empresas, addEmpresa, updateEmpresa, getEmpresa } = useEmpresas();
   const { addUsuariosForEmpresa, getUsuariosByEmpresa, setTelefonesForEmpresa } = useUsuarios();
+
   const [formData, setFormData] = useState({
     nome_empresa: '',
     cnpj: '',
@@ -40,16 +27,24 @@ const CompanyModal = ({ isOpen, onClose, editingCompanyId }: CompanyModalProps) 
   useEffect(() => {
     if (editingCompanyId !== null) {
       const empresa = getEmpresa(editingCompanyId);
-      if (empresa) {
-        const usuarios = getUsuariosByEmpresa(editingCompanyId);
-        const telefones = usuarios.map(u => u.telefone ?? '').filter(t => t);
-        setFormData({
-          nome_empresa: empresa.nome_empresa,
-          cnpj: empresa.cnpj,
-          phoneNumbers: telefones.length ? telefones : [''],
-        });
+
+      if (!empresa) {
+        console.warn("Empresa não encontrada para edição:", editingCompanyId);
+        // NÃO QUEBRA A UI
+        return;
       }
+
+      const usuarios = getUsuariosByEmpresa(editingCompanyId);
+      const telefones = usuarios.map(u => u.telefone ?? '').filter(Boolean);
+
+      setFormData({
+        nome_empresa: empresa.nome_empresa ?? "",
+        cnpj: empresa.cnpj ?? "",
+        phoneNumbers: telefones.length ? telefones : [''],
+      });
+
     } else {
+      // MODO CRIAÇÃO
       setFormData({
         nome_empresa: '',
         cnpj: '',
@@ -63,12 +58,18 @@ const CompanyModal = ({ isOpen, onClose, editingCompanyId }: CompanyModalProps) 
   };
 
   const handleRemovePhoneNumber = (index: number) => {
-    setFormData(prev => ({ ...prev, phoneNumbers: prev.phoneNumbers.filter((_, i) => i !== index) }));
+    setFormData(prev => ({ 
+      ...prev, 
+      phoneNumbers: prev.phoneNumbers.filter((_, i) => i !== index) 
+    }));
   };
 
   const handlePhoneNumberChange = (index: number, value: string) => {
     const formatted = value.replace(/\D/g, '');
-    setFormData(prev => ({ ...prev, phoneNumbers: prev.phoneNumbers.map((p, i) => (i === index ? formatted : p)) }));
+    setFormData(prev => ({
+      ...prev, 
+      phoneNumbers: prev.phoneNumbers.map((p, i) => (i === index ? formatted : p)) 
+    }));
   };
 
   const formatCNPJInput = (value: string) => {
@@ -76,10 +77,10 @@ const CompanyModal = ({ isOpen, onClose, editingCompanyId }: CompanyModalProps) 
     return numbers.slice(0, 14);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validação
+    // Validações
     if (!formData.nome_empresa.trim()) {
       toast.error('Nome da empresa é obrigatório');
       return;
@@ -95,21 +96,43 @@ const CompanyModal = ({ isOpen, onClose, editingCompanyId }: CompanyModalProps) 
       toast.error('CNPJ já cadastrado');
       return;
     }
+
     const validPhones = formData.phoneNumbers.filter(p => p.length >= 10);
     if (validPhones.length === 0) {
       toast.error('Adicione pelo menos um telefone válido (mínimo 10 dígitos)');
       return;
     }
-    const empresaData = { nome_empresa: formData.nome_empresa, cnpj: formData.cnpj };
+
+    const empresaData = {
+      nome_empresa: formData.nome_empresa,
+      cnpj: formData.cnpj,
+      token_api: ""
+    };
 
     if (editingCompanyId !== null) {
-      updateEmpresa(editingCompanyId, empresaData);
-      setTelefonesForEmpresa(validPhones, editingCompanyId);
-      toast.success('Empresa atualizada com sucesso!');
-    } else {
-      const created = addEmpresa(empresaData);
+  const empresaOriginal = getEmpresa(editingCompanyId);
+
+  updateEmpresa(editingCompanyId, {
+    nome_empresa: formData.nome_empresa,
+    cnpj: formData.cnpj,
+    token_api: empresaOriginal?.token_api || undefined
+  });
+
+  setTelefonesForEmpresa(validPhones, editingCompanyId);
+  toast.success("Empresa atualizada com sucesso!");
+}
+
+
+    else {
+      const created = await addEmpresa(empresaData);
+
+      if (!created || !created.id_empresa) {
+        toast.error("Erro ao criar empresa.");
+        return;
+      }
+
       addUsuariosForEmpresa(validPhones, created.id_empresa);
-      toast.success('Empresa adicionada com sucesso!');
+      toast.success("Empresa criada com sucesso!");
     }
 
     onClose();
@@ -120,7 +143,7 @@ const CompanyModal = ({ isOpen, onClose, editingCompanyId }: CompanyModalProps) 
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {editingCompanyId ? 'Editar Empresa' : 'Adicionar Nova Empresa'}
+            {editingCompanyId ? "Editar Empresa" : "Adicionar Nova Empresa"}
           </DialogTitle>
           <DialogDescription>
             Preencha os dados da empresa. Todos os campos são obrigatórios.
@@ -128,6 +151,8 @@ const CompanyModal = ({ isOpen, onClose, editingCompanyId }: CompanyModalProps) 
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6 mt-4">
+          
+          {/* Nome */}
           <div className="space-y-2">
             <Label htmlFor="nome_empresa">Nome da Empresa *</Label>
             <Input
@@ -139,6 +164,7 @@ const CompanyModal = ({ isOpen, onClose, editingCompanyId }: CompanyModalProps) 
             />
           </div>
 
+          {/* CNPJ */}
           <div className="space-y-2">
             <Label htmlFor="cnpj">CNPJ *</Label>
             <Input
@@ -152,6 +178,7 @@ const CompanyModal = ({ isOpen, onClose, editingCompanyId }: CompanyModalProps) 
             <p className="text-xs text-muted-foreground">Somente números (14 dígitos)</p>
           </div>
 
+          {/* Telefones */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label>Números de Telefone *</Label>
@@ -167,32 +194,37 @@ const CompanyModal = ({ isOpen, onClose, editingCompanyId }: CompanyModalProps) 
                   <Input
                     value={phone}
                     onChange={(e) => handlePhoneNumberChange(index, e.target.value)}
-                    placeholder="Ex: 11999999999"
+                    placeholder="11999999999"
                     maxLength={11}
                   />
+
                   {formData.phoneNumbers.length > 1 && (
-                    <Button type="button" size="icon" variant="outline" onClick={() => handleRemovePhoneNumber(index)}>
+                    <Button 
+                      type="button" 
+                      size="icon" 
+                      variant="outline"
+                      onClick={() => handleRemovePhoneNumber(index)}
+                    >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   )}
                 </div>
               ))}
             </div>
+
             <p className="text-xs text-muted-foreground">Somente números (mínimo 10 dígitos)</p>
           </div>
 
-          
-
-          
-
+          {/* Actions */}
           <div className="flex gap-3 justify-end pt-4 border-t">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>
             <Button type="submit">
-              {editingCompanyId ? 'Atualizar' : 'Adicionar'}
+              {editingCompanyId ? "Atualizar" : "Adicionar"}
             </Button>
           </div>
+
         </form>
       </DialogContent>
     </Dialog>
