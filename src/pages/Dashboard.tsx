@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEmpresas } from '@/contexts/CompanyContext';
 import { Button } from '@/components/ui/button';
-import { Plus, LogOut, Building2, Settings } from 'lucide-react';
-import { Bell } from 'lucide-react';
+import { Plus, LogOut, Building2, Bell } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -13,13 +12,29 @@ import CompanyModal from '@/components/CompanyModal';
 import logoEasy from '@/assets/logo-easy.png';
 
 const Dashboard = () => {
-      const { empresas } = useEmpresas();
-      const { getUsuariosByEmpresa } = useUsuarios();
-      const [notificacaoAtiva, setNotificacaoAtiva] = useState<Record<string, boolean>>({});
-      const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const { empresas } = useEmpresas();
+  const { getUsuariosByEmpresa } = useUsuarios();
+
   const { user, logout } = useAuth();
+
+  const [notificacaoAtiva, setNotificacaoAtiva] = useState<Record<string, boolean>>({});
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCompanyId, setEditingCompanyId] = useState<number | null>(null);
+
+  if (user?.role !== "plataforma_admin") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center p-8 border rounded-lg bg-card">
+          <h1 className="text-2xl font-bold mb-2 text-foreground">Acesso Negado</h1>
+          <p className="text-muted-foreground">Este painel é exclusivo para administradores da plataforma.</p>
+
+          {/* Caso queira redirecionar automaticamente, habilite: */}
+          {/* window.location.href = "/empresa-dashboard"; */}
+        </div>
+      </div>
+    );
+  }
 
   const handleAddCompany = () => {
     setEditingCompanyId(null);
@@ -38,12 +53,14 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background flex">
+      
       {/* Modal de Notificações */}
       <Dialog open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Ativar/Desativar Notificações</DialogTitle>
           </DialogHeader>
+
           {empresas.length === 0 ? (
             <p className="text-muted-foreground">Nenhuma empresa cadastrada.</p>
           ) : (
@@ -51,15 +68,24 @@ const Dashboard = () => {
               {empresas.map((empresa) => (
                 <div key={empresa.id_empresa} className="border-b pb-4 mb-4">
                   <h2 className="font-bold text-lg text-foreground mb-2">{empresa.nome_empresa}</h2>
+
                   <div className="space-y-2">
                     {getUsuariosByEmpresa(empresa.id_empresa).map((usuario) => (
-                      <div key={`${empresa.id_empresa}_${usuario.telefone}`} className="flex items-center justify-between">
-                        <div>
-                          <Label>{usuario.nome} - <span className="text-muted-foreground">{usuario.telefone}</span></Label>
-                        </div>
+                      <div key={`${empresa.id_empresa}_${usuario.telefone}`}
+                           className="flex items-center justify-between">
+                        <Label>
+                          {usuario.nome} -{" "}
+                          <span className="text-muted-foreground">{usuario.telefone}</span>
+                        </Label>
+
                         <Switch
                           checked={!!notificacaoAtiva[`${empresa.id_empresa}_${usuario.telefone}`]}
-                          onCheckedChange={(checked) => setNotificacaoAtiva((prev) => ({ ...prev, [`${empresa.id_empresa}_${usuario.telefone}`]: checked }))}
+                          onCheckedChange={(checked) =>
+                            setNotificacaoAtiva((prev) => ({
+                              ...prev,
+                              [`${empresa.id_empresa}_${usuario.telefone}`]: checked
+                            }))
+                          }
                         />
                       </div>
                     ))}
@@ -70,25 +96,24 @@ const Dashboard = () => {
           )}
         </DialogContent>
       </Dialog>
+
       {/* Sidebar */}
       <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
         <div className="p-6 border-b border-sidebar-border">
           <img src={logoEasy} alt="EASY Logo" className="h-10" />
         </div>
-        
+
         <nav className="flex-1 p-4 space-y-2">
-          <Button
-            variant="ghost"
-            className="w-full justify-start bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/80"
-          >
+          <Button variant="ghost"
+                  className="w-full justify-start bg-sidebar-accent text-sidebar-accent-foreground">
             <Building2 className="mr-3 h-5 w-5" />
             Empresas
           </Button>
+
           <Button
             variant="ghost"
-            className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             onClick={() => setIsNotificationsOpen(true)}
-          >
+            className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
             <Bell className="mr-3 h-5 w-5" />
             Notificações
           </Button>
@@ -97,24 +122,26 @@ const Dashboard = () => {
         <div className="p-4 border-t border-sidebar-border">
           <Button
             variant="ghost"
-            className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             onClick={logout}
-          >
+            className="w-full justify-start">
             <LogOut className="mr-3 h-5 w-5" />
             Sair
           </Button>
         </div>
       </aside>
 
-      {/* Main Content */}
+      {/* MAIN CONTENT */}
       <div className="flex-1 flex flex-col">
+
         {/* Header */}
         <header className="h-16 bg-card border-b border-border flex items-center justify-between px-8">
           <h1 className="text-xl font-semibold text-foreground">Gerenciamento de Empresas</h1>
+
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">
-              Bem-vindo, <span className="text-foreground font-medium">{user?.name}</span>
+              Bem-vindo, <span className="text-foreground font-medium">{user?.nome}</span>
             </span>
+
             <Button size="sm" variant="outline" onClick={logout}>
               <LogOut className="mr-2 h-4 w-4" />
               Sair
@@ -128,9 +155,11 @@ const Dashboard = () => {
             <div>
               <h2 className="text-2xl font-bold text-foreground">Empresas Cadastradas</h2>
               <p className="text-muted-foreground mt-1">
-                {empresas.length} {empresas.length === 1 ? 'empresa cadastrada' : 'empresas cadastradas'}
+                {empresas.length} {empresas.length === 1 ? "empresa cadastrada" : "empresas cadastradas"}
               </p>
             </div>
+
+            {/* Plataforma Admin pode adicionar empresas */}
             <Button onClick={handleAddCompany}>
               <Plus className="mr-2 h-4 w-4" />
               Adicionar Empresa
@@ -140,11 +169,8 @@ const Dashboard = () => {
           <CompanyTable onEdit={handleEditCompany} />
         </main>
 
-        {/* Footer */}
-        <footer className="bg-card border-t border-border py-4 px-8">
-          <p className="text-sm text-muted-foreground text-center">
-            2025 Desenvolvido por SQUAD-07 UNIT
-          </p>
+        <footer className="bg-card border-t border-border py-4 px-8 text-center text-muted-foreground">
+          2025 Desenvolvido por SQUAD-07 UNIT
         </footer>
       </div>
 
